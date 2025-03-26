@@ -1,138 +1,109 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.util.List;
+import java.io.File;
 
-// Classe principal que representa a interface gráfica do Jogo da Forca
 public class JogoDaForca extends JFrame {
-    // Componentes da interface gráfica
     private ForcaPanel forcaPanel;
-    private JLabel dicaLabel;
     private JLabel palavraLabel;
     private JLabel letrasDigitadasLabel;
+    private JLabel vitoriasLabel;
+    private JLabel derrotasLabel;
+    private JLabel pontuacaoLabel;
     private JButton novoJogoButton;
     private JButton voltarMenuButton;
+    private JButton sairJogoButton;
     private JPanel teclado;
-    private JLabel pontuacaoLabel;
-    private JButton dicaButton;
     private JButton resetarPontuacaoButton;
 
-    // Instância da lógica do jogo
-    private Jogo jogo;
+    private JogoDaForcaLogic jogo;
 
-    // Construtor da classe JogoDaForca
-    public JogoDaForca() {
+    public JogoDaForca(String bancoPalavraspath) {
         setTitle("Jogo da Forca");
         setSize(1000, 750);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
-        // Inicializa a lógica do jogo
-        jogo = new Jogo();
+        jogo = new JogoDaForcaLogic(bancoPalavraspath);
 
-        // Exibe o menu inicial
+        // Salvar palavras usadas ao fechar o jogo
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                jogo.salvarPalavrasUsadas();
+            }
+        });
+
         mostrarMenuInicial();
     }
 
-    // Método para exibir o menu inicial
     private void mostrarMenuInicial() {
         getContentPane().removeAll();
         setLayout(new GridLayout(3, 1));
 
-        JButton jogarSozinhoButton = new JButton("Jogar Sozinho");
-        JButton jogarEmDuplaButton = new JButton("Jogar em Dupla");
+        JButton jogarButton = new JButton("Jogar");
+        JButton sairButton = new JButton("Sair do Jogo");
 
-        jogarSozinhoButton.addActionListener(e -> mostrarSelecaoDificuldade());
-        jogarEmDuplaButton.addActionListener(e -> mostrarSelecaoPalavra());
+        jogarButton.addActionListener(e -> mostrarSelecaoTamanhoPalavra());
+        sairButton.addActionListener(e -> sairDoJogo());
 
-        add(new JLabel("Escolha o modo de jogo:", SwingConstants.CENTER));
-        add(jogarSozinhoButton);
-        add(jogarEmDuplaButton);
+        add(new JLabel("Bem-vindo ao Jogo da Forca!", SwingConstants.CENTER));
+        add(jogarButton);
+        add(sairButton);
 
         revalidate();
         repaint();
     }
 
-    // Método para exibir a seleção de dificuldade
-    private void mostrarSelecaoDificuldade() {
+    private void mostrarSelecaoTamanhoPalavra() {
         getContentPane().removeAll();
-        setLayout(new GridLayout(5, 1));
+        setLayout(new GridLayout(0, 1));
 
-        JButton facilButton = new JButton("Facil");
-        JButton medioButton = new JButton("Medio");
-        JButton dificilButton = new JButton("Dificil");
+        JLabel instrucaoLabel = new JLabel("Escolha o tamanho da palavra (3 a 14 letras):", SwingConstants.CENTER);
+        add(instrucaoLabel);
+
+        for (int i = 3; i <= 14; i++) {
+            JButton tamanhoButton = new JButton(i + " letras");
+            final int tamanho = i;
+            tamanhoButton.addActionListener(e -> iniciarJogoComTamanho(tamanho));
+            add(tamanhoButton);
+        }
+
+        JButton resetarPontuacaoButton = new JButton("Resetar Pontuacao");
+        resetarPontuacaoButton.addActionListener(e -> resetarPontuacao());
+        add(resetarPontuacaoButton);
+
         JButton voltarButton = new JButton("Voltar ao Menu");
-
-        facilButton.addActionListener(e -> iniciarJogo(0));
-        medioButton.addActionListener(e -> iniciarJogo(1));
-        dificilButton.addActionListener(e -> iniciarJogo(2));
         voltarButton.addActionListener(e -> mostrarMenuInicial());
-
-        add(new JLabel("Escolha a dificuldade:", SwingConstants.CENTER));
-        add(facilButton);
-        add(medioButton);
-        add(dificilButton);
         add(voltarButton);
 
         revalidate();
         repaint();
     }
 
-    // Método para exibir a seleção de palavra (modo multijogador)
-    private void mostrarSelecaoPalavra() {
+    private void iniciarJogoComTamanho(int tamanho) {
+        jogo.setTamanhoPalavra(tamanho);
+        iniciarJogo(-1);
+    }
+
+    private void iniciarJogo(int unused) {
         getContentPane().removeAll();
         setLayout(new BorderLayout());
 
-        JPanel palavrasPanel = new JPanel(new GridLayout(0, 5, 5, 5));
-        JScrollPane scrollPane = new JScrollPane(palavrasPanel);
-
-        JLabel instrucaoLabel = new JLabel("Escolha uma palavra:", SwingConstants.CENTER);
-        add(instrucaoLabel, BorderLayout.NORTH);
-
-        List<Palavra> palavras = jogo.getPalavras();
-        for (Palavra palavra : palavras) {
-            JButton palavraButton = new JButton(palavra.getPalavra());
-            palavraButton.addActionListener(e -> {
-                jogo.setModoMultijogador(true);
-                jogo.setPalavraMultijogador(palavra);
-                iniciarJogo(-1);
-            });
-            palavrasPanel.add(palavraButton);
+        try {
+            jogo.novoJogo();
+            criarComponentes();
+        } catch (IllegalStateException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage());
+            mostrarSelecaoTamanhoPalavra();
+            return;
         }
-
-        JButton voltarButton = new JButton("Voltar ao Menu");
-        voltarButton.addActionListener(e -> mostrarMenuInicial());
-
-        add(scrollPane, BorderLayout.CENTER);
-        add(voltarButton, BorderLayout.SOUTH);
 
         revalidate();
         repaint();
     }
 
-    // Método para iniciar o jogo
-    private void iniciarJogo(int dificuldade) {
-        getContentPane().removeAll();
-        setLayout(new BorderLayout());
-
-        if (dificuldade >= 0) {
-            jogo.setModoMultijogador(false);
-            jogo.setDificuldade(dificuldade);
-        } else {
-            jogo.setModoMultijogador(true);
-        }
-        
-        jogo.novoJogo();
-
-        criarComponentes();
-
-        revalidate();
-        repaint();
-    }
-
-    // Método para criar os componentes da interface do jogo
     private void criarComponentes() {
-        // Cria o painel superior
         JPanel topPanel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0;
@@ -141,36 +112,36 @@ public class JogoDaForca extends JFrame {
 
         forcaPanel = new ForcaPanel(jogo.getForca());
         forcaPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-        forcaPanel.setPreferredSize(new Dimension(350, 350)); // Ajustado para o tamanho atual
+        forcaPanel.setPreferredSize(new Dimension(350, 350));
         topPanel.add(forcaPanel, gbc);
 
         add(topPanel, BorderLayout.NORTH);
 
-        // Cria o painel de informações
-        JPanel infoPanel = new JPanel(new GridLayout(8, 1));
+        JPanel infoPanel = new JPanel(new GridLayout(8, 1)); // Aumentei para 8 linhas para acomodar as novas labels
         infoPanel.setBorder(BorderFactory.createTitledBorder("INFORMACOES"));
 
-        dicaLabel = new JLabel("Dica: ");
         palavraLabel = new JLabel("Palavra: ");
-        letrasDigitadasLabel = new JLabel("Letras Digitadas:");
+        letrasDigitadasLabel = new JLabel("Letras Digitadas: ");
+        vitoriasLabel = new JLabel("Hits: ");
+        derrotasLabel = new JLabel("Fails: ");
         pontuacaoLabel = new JLabel("Pontuacao: ");
         novoJogoButton = new JButton("Novo Jogo");
-        dicaButton = new JButton("Usar Dica");
         voltarMenuButton = new JButton("Voltar ao Menu");
+        sairJogoButton = new JButton("Sair do Jogo");
         resetarPontuacaoButton = new JButton("Resetar Pontuacao");
 
-        infoPanel.add(dicaLabel);
         infoPanel.add(palavraLabel);
         infoPanel.add(letrasDigitadasLabel);
+        infoPanel.add(vitoriasLabel);
+        infoPanel.add(derrotasLabel);
         infoPanel.add(pontuacaoLabel);
         infoPanel.add(novoJogoButton);
-        infoPanel.add(dicaButton);
         infoPanel.add(voltarMenuButton);
+        infoPanel.add(sairJogoButton);
         infoPanel.add(resetarPontuacaoButton);
 
         add(infoPanel, BorderLayout.WEST);
 
-        // Cria o teclado virtual
         teclado = new JPanel(new GridLayout(7, 4, 5, 5));
         teclado.setBorder(BorderFactory.createTitledBorder("ESCOLHA UMA LETRA"));
         String[] letras = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -183,38 +154,35 @@ public class JogoDaForca extends JFrame {
 
         add(teclado, BorderLayout.CENTER);
 
-        // Adiciona listeners aos botões
         novoJogoButton.addActionListener(e -> reiniciarJogo());
-        dicaButton.addActionListener(e -> usarDica());
         voltarMenuButton.addActionListener(e -> mostrarMenuInicial());
+        sairJogoButton.addActionListener(e -> sairDoJogo());
         resetarPontuacaoButton.addActionListener(e -> resetarPontuacao());
 
         atualizarInterface();
     }
 
-    // Método para reiniciar o jogo
     private void reiniciarJogo() {
-        if (jogo.isModoMultijogador()) {
-            mostrarSelecaoPalavra();
-        } else {
+        try {
+            jogo.marcarPalavraComoUsada();
             jogo.novoJogo();
             atualizarInterface();
             habilitarTeclado(true);
-            dicaButton.setEnabled(true);
+        } catch (IllegalStateException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage());
+            mostrarSelecaoTamanhoPalavra();
         }
     }
 
-    // Método para atualizar a interface do jogo
     private void atualizarInterface() {
         forcaPanel.atualizar(jogo.getForca());
-        dicaLabel.setText("Dica: " + jogo.getDica());
         palavraLabel.setText("Palavra: " + jogo.getPalavraEscondida());
-        letrasDigitadasLabel.setText("Letras Digitadas: " + jogo.getLetrasDigitadas());
-        pontuacaoLabel.setText(jogo.getPontuacao()); // Agora exibe Total Score, Hits, Fails e Guesses
-        dicaButton.setEnabled(!jogo.jogoAcabou());
+        letrasDigitadasLabel.setText("Guesses: " + jogo.getLetrasDigitadas());
+        vitoriasLabel.setText("Hits: " + jogo.getVitorias());
+        derrotasLabel.setText("Fails: " + jogo.getDerrotas());
+        pontuacaoLabel.setText("Pontuacao: " + jogo.getPontuacao());
     }
 
-    // Método para habilitar ou desabilitar o teclado virtual
     private void habilitarTeclado(boolean habilitar) {
         for (Component c : teclado.getComponents()) {
             if (c instanceof JButton) {
@@ -223,40 +191,32 @@ public class JogoDaForca extends JFrame {
         }
     }
 
-    // Método para usar uma dica
-    private void usarDica() {
-        char letraRevelada = jogo.usarDica();
-        if (letraRevelada != ' ') {
-            JOptionPane.showMessageDialog(this, "A dica revelou a letra: " + letraRevelada);
-            atualizarInterface();
-            if (jogo.jogoAcabou()) {
-                fimDeJogo();
-            }
-        } else {
-            JOptionPane.showMessageDialog(this, "Não há mais letras para revelar!");
-            dicaButton.setEnabled(false);
-        }
-    }
-
-    // Método chamado quando o jogo termina
     private void fimDeJogo() {
         habilitarTeclado(false);
-        dicaButton.setEnabled(false);
         boolean vitoria = !jogo.getPalavraEscondida().contains("_");
         jogo.atualizarPontuacao();
+        jogo.marcarPalavraComoUsada();
         JOptionPane.showMessageDialog(this,
             vitoria ? "Parabéns, você ganhou!" : "Você perdeu!");
         atualizarInterface();
     }
 
-    // Método para resetar a pontuação
     private void resetarPontuacao() {
         jogo.resetarPontuacao();
+        jogo.limparPalavrasUsadas();
+        JOptionPane.showMessageDialog(this, "Pontuação e palavras usadas resetadas.");
         atualizarInterface();
-        JOptionPane.showMessageDialog(this, "Pontuação resetada.");
     }
 
-    // Classe interna para lidar com os cliques nas letras do teclado virtual
+    private void sairDoJogo() {
+        String estatisticas = "Estatísticas do Jogo:\n" +
+                             "Vitórias: " + jogo.getVitorias() + "\n" +
+                             "Derrotas: " + jogo.getDerrotas() + "\n" +
+                             "Pontuação Total: " + jogo.getPontuacao();
+        JOptionPane.showMessageDialog(this, estatisticas, "Estatísticas", JOptionPane.INFORMATION_MESSAGE);
+        System.exit(0);
+    }
+
     private class LetraListener implements ActionListener {
         private char letra;
 
@@ -277,16 +237,33 @@ public class JogoDaForca extends JFrame {
         }
     }
 
-    // Método principal para iniciar o jogo
     public static void main(String[] args) {
+        if (args.length < 1) {
+            JOptionPane.showMessageDialog(null, 
+                "Por favor, forneça o caminho do arquivo de palavras.", 
+                "Erro", 
+                JOptionPane.ERROR_MESSAGE);
+            System.exit(1);
+        }
+
+        String bancoPalavrasPath = args[0];
+        File bancoPalavrasFile = new File(bancoPalavrasPath);
+        
+        if (!bancoPalavrasFile.exists() || !bancoPalavrasFile.isFile()) {
+            JOptionPane.showMessageDialog(null, 
+                "Arquivo de palavras não encontrado: " + bancoPalavrasPath, 
+                "Erro", 
+                JOptionPane.ERROR_MESSAGE);
+            System.exit(1);
+        }
+
         SwingUtilities.invokeLater(() -> {
-            JogoDaForca jogo = new JogoDaForca();
+            JogoDaForca jogo = new JogoDaForca(bancoPalavrasPath);
             jogo.setVisible(true);
         });
     }
 }
 
-// Painel personalizado para desenhar a forca
 class ForcaPanel extends JPanel {
     private Forca forca;
 
@@ -299,8 +276,6 @@ class ForcaPanel extends JPanel {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
-
-        // Ajusta as coordenadas para centralizar o boneco
         g2d.setStroke(new BasicStroke(3));
         g2d.drawLine(55, 305, 195, 305);
         g2d.drawLine(125, 305, 125, 85);
