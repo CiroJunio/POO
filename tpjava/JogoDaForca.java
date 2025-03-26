@@ -6,8 +6,7 @@ import java.util.List;
 // Classe principal que representa a interface gráfica do Jogo da Forca
 public class JogoDaForca extends JFrame {
     // Componentes da interface gráfica
-    private JLabel imagemForca;
-    private JLabel imagemJogoDaForca;
+    private ForcaPanel forcaPanel;
     private JLabel dicaLabel;
     private JLabel palavraLabel;
     private JLabel letrasDigitadasLabel;
@@ -40,15 +39,12 @@ public class JogoDaForca extends JFrame {
         getContentPane().removeAll();
         setLayout(new GridLayout(3, 1));
 
-        // Cria botões para os modos de jogo
         JButton jogarSozinhoButton = new JButton("Jogar Sozinho");
         JButton jogarEmDuplaButton = new JButton("Jogar em Dupla");
 
-        // Adiciona listeners aos botões
         jogarSozinhoButton.addActionListener(e -> mostrarSelecaoDificuldade());
         jogarEmDuplaButton.addActionListener(e -> mostrarSelecaoPalavra());
 
-        // Adiciona componentes à janela
         add(new JLabel("Escolha o modo de jogo:", SwingConstants.CENTER));
         add(jogarSozinhoButton);
         add(jogarEmDuplaButton);
@@ -62,19 +58,16 @@ public class JogoDaForca extends JFrame {
         getContentPane().removeAll();
         setLayout(new GridLayout(5, 1));
 
-        // Cria botões para os níveis de dificuldade
         JButton facilButton = new JButton("Facil");
         JButton medioButton = new JButton("Medio");
         JButton dificilButton = new JButton("Dificil");
         JButton voltarButton = new JButton("Voltar ao Menu");
 
-        // Adiciona listeners aos botões
         facilButton.addActionListener(e -> iniciarJogo(0));
         medioButton.addActionListener(e -> iniciarJogo(1));
         dificilButton.addActionListener(e -> iniciarJogo(2));
         voltarButton.addActionListener(e -> mostrarMenuInicial());
 
-        // Adiciona componentes à janela
         add(new JLabel("Escolha a dificuldade:", SwingConstants.CENTER));
         add(facilButton);
         add(medioButton);
@@ -96,7 +89,6 @@ public class JogoDaForca extends JFrame {
         JLabel instrucaoLabel = new JLabel("Escolha uma palavra:", SwingConstants.CENTER);
         add(instrucaoLabel, BorderLayout.NORTH);
 
-        // Cria botões para cada palavra disponível
         List<Palavra> palavras = jogo.getPalavras();
         for (Palavra palavra : palavras) {
             JButton palavraButton = new JButton(palavra.getPalavra());
@@ -124,11 +116,9 @@ public class JogoDaForca extends JFrame {
         setLayout(new BorderLayout());
 
         if (dificuldade >= 0) {
-            // Modo singleplayer
             jogo.setModoMultijogador(false);
             jogo.setDificuldade(dificuldade);
         } else {
-            // Modo multijogador
             jogo.setModoMultijogador(true);
         }
         
@@ -142,18 +132,17 @@ public class JogoDaForca extends JFrame {
 
     // Método para criar os componentes da interface do jogo
     private void criarComponentes() {
-        // Cria o painel superior com as imagens
-        JPanel topPanel = new JPanel(new GridLayout(1, 2));
-        
-        imagemForca = new JLabel();
-        imagemForca.setIcon(new ImageIcon("forca0.png")); 
-        imagemForca.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-        topPanel.add(imagemForca);
+        // Cria o painel superior
+        JPanel topPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.insets = new Insets(10, 50, 10, 10);
 
-        imagemJogoDaForca = new JLabel();
-        imagemJogoDaForca.setIcon(new ImageIcon("forca99.png"));
-        imagemJogoDaForca.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-        topPanel.add(imagemJogoDaForca);
+        forcaPanel = new ForcaPanel(jogo.getForca());
+        forcaPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+        forcaPanel.setPreferredSize(new Dimension(350, 350)); // Ajustado para o tamanho atual
+        topPanel.add(forcaPanel, gbc);
 
         add(topPanel, BorderLayout.NORTH);
 
@@ -217,11 +206,11 @@ public class JogoDaForca extends JFrame {
 
     // Método para atualizar a interface do jogo
     private void atualizarInterface() {
-        imagemForca.setIcon(new ImageIcon(jogo.getImagemForca()));
+        forcaPanel.atualizar(jogo.getForca());
         dicaLabel.setText("Dica: " + jogo.getDica());
         palavraLabel.setText("Palavra: " + jogo.getPalavraEscondida());
         letrasDigitadasLabel.setText("Letras Digitadas: " + jogo.getLetrasDigitadas());
-        pontuacaoLabel.setText(jogo.getPontuacao());
+        pontuacaoLabel.setText(jogo.getPontuacao()); // Agora exibe Total Score, Hits, Fails e Guesses
         dicaButton.setEnabled(!jogo.jogoAcabou());
     }
 
@@ -244,7 +233,7 @@ public class JogoDaForca extends JFrame {
                 fimDeJogo();
             }
         } else {
-            JOptionPane.showMessageDialog(this, "Não ha mais letras para revelar!");
+            JOptionPane.showMessageDialog(this, "Não há mais letras para revelar!");
             dicaButton.setEnabled(false);
         }
     }
@@ -252,10 +241,10 @@ public class JogoDaForca extends JFrame {
     // Método chamado quando o jogo termina
     private void fimDeJogo() {
         habilitarTeclado(false);
-        dicaButton.setEnabled(false); 
+        dicaButton.setEnabled(false);
         boolean vitoria = !jogo.getPalavraEscondida().contains("_");
         jogo.atualizarPontuacao();
-        JOptionPane.showMessageDialog(this, 
+        JOptionPane.showMessageDialog(this,
             vitoria ? "Parabéns, você ganhou!" : "Você perdeu!");
         atualizarInterface();
     }
@@ -264,7 +253,7 @@ public class JogoDaForca extends JFrame {
     private void resetarPontuacao() {
         jogo.resetarPontuacao();
         atualizarInterface();
-        JOptionPane.showMessageDialog(this, "Pontuacao resetada.");
+        JOptionPane.showMessageDialog(this, "Pontuação resetada.");
     }
 
     // Classe interna para lidar com os cliques nas letras do teclado virtual
@@ -294,5 +283,42 @@ public class JogoDaForca extends JFrame {
             JogoDaForca jogo = new JogoDaForca();
             jogo.setVisible(true);
         });
+    }
+}
+
+// Painel personalizado para desenhar a forca
+class ForcaPanel extends JPanel {
+    private Forca forca;
+
+    public ForcaPanel(Forca forca) {
+        this.forca = forca;
+        setPreferredSize(new Dimension(350, 350));
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        Graphics2D g2d = (Graphics2D) g;
+
+        // Ajusta as coordenadas para centralizar o boneco
+        g2d.setStroke(new BasicStroke(3));
+        g2d.drawLine(55, 305, 195, 305);
+        g2d.drawLine(125, 305, 125, 85);
+        g2d.drawLine(125, 85, 175, 85);
+        g2d.drawLine(175, 85, 175, 115);
+
+        int erros = forca.getErros();
+        if (erros >= 1) g2d.drawLine(175, 145, 175, 205);
+        if (erros >= 2) g2d.drawOval(155, 115, 40, 40);
+        if (erros >= 3) g2d.drawLine(175, 155, 145, 175);
+        if (erros >= 4) g2d.drawLine(175, 155, 205, 175);
+        if (erros >= 5) g2d.drawLine(175, 205, 145, 235);
+        if (erros >= 6) g2d.drawLine(175, 205, 205, 235);
+        if (erros >= 7) g2d.drawLine(155, 135, 195, 135);
+    }
+
+    public void atualizar(Forca forca) {
+        this.forca = forca;
+        repaint();
     }
 }
